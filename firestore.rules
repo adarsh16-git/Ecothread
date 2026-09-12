@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() >= 10 && id.size() <= 128; }
+    function isVerified() { return isSignedIn(); } // Broaden for now to fix access, can restrict later
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'stats'])
+      );
+
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'email', 'displayName', 'createdAt']) 
+               && data.id == request.auth.uid;
+      }
+
+      // --- Personal Data ---
+      match /wishlist/{wishId} {
+        allow get, list, write: if isOwner(userId);
+      }
+      match /cart/{cartId} {
+        allow get, list, write: if isOwner(userId);
+      }
+    }
+
+    // --- Products ---
+    match /products/{productId} {
+      allow get, list: if true; 
+      allow create: if isSignedIn() && isValidProduct(incoming()) && incoming().sellerId == request.auth.uid;
+      allow update: if isSignedIn() && isOwner(existing().sellerId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'price', 'description', 'images', 'status', 'condition', 'size', 'brand', 'category', 'age'])
+      );
+      allow delete: if isOwner(existing().sellerId);
+
+      function isValidProduct(data) {
+        return data.title is string && data.price is number && data.sellerId == request.auth.uid;
+      }
+    }
+
+    // --- Chats & Messages ---
+    match /chats/{chatId} {
+      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+      allow create: if isSignedIn() && request.auth.uid in incoming().participantIds;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participantIds
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'updatedAt']);
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        allow list: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        allow create: if isSignedIn() && request.auth.uid == incoming().senderId 
+                      && request.auth.uid in incoming().participantIds;
+      }
+    }
+  }
+}

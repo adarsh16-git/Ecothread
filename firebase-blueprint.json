@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Details about a user of the EcoThread platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "listings": { "type": "number" },
+            "sold": { "type": "number" },
+            "rented": { "type": "number" }
+          }
+        }
+      },
+      "required": ["id", "email", "displayName"]
+    },
+    "Product": {
+      "title": "Product Listing",
+      "description": "A garment listed for purchase or rental.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "brand": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "type": { "type": "string", "enum": ["sell", "rent"] },
+        "condition": { "type": "string", "enum": ["New", "Like New", "Good", "Worn"] },
+        "size": { "type": "string" },
+        "age": { "type": "string" },
+        "description": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "sellerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["available", "sold", "rented"] }
+      },
+      "required": ["title", "price", "type", "sellerId", "images"]
+    },
+    "Message": {
+      "title": "ChatMessage",
+      "description": "A message in a peer-to-peer conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "text", "createdAt", "chatId"]
+    },
+    "Chat": {
+      "title": "Chat Session",
+      "description": "A conversation between two users regarding a product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participantIds": { "type": "array", "items": { "type": "string" } },
+        "productId": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participantIds", "productId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public user profiles"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Marketplace listings"
+    },
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Direct conversation threads between users"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a chat"
+    },
+    "/users/{userId}/wishlist/{wishId}": {
+      "schema": "Product",
+      "description": "User's bookmarked products"
+    },
+    "/users/{userId}/cart/{cartId}": {
+      "schema": "Product",
+      "description": "Items ready for purchase"
+    }
+  }
+}
